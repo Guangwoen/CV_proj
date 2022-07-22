@@ -12,11 +12,11 @@
 
 * 此项目由三个部分组成：
 
-1. src: 巴斯巴文识别应用
+1. src: 巴斯巴文识别应用源代码
 
-2. helper: 决策树的构造和数据集构造源代码
+2. data_set: 巴斯巴文数据集
 
-3. data_set: 巴斯巴文数据集
+3. model: 决策树模型保存
 
 *** 
 
@@ -69,3 +69,13 @@
 * 识别函数是construct_decision_tree中的classify函数。
 
 * 关于具体的算法，可以通过代码中的注解进行了解。
+
+***
+
+## 项目运行
+
+* 需要python环境python3.7以上
+
+* 通过命令行进入该项目后，通过命令 `pip install -r requirements.txt` 进行依赖包安装
+
+* 入口文件为: src/main.py

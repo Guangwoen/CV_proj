@@ -1,5 +1,4 @@
-import numpy as np
-from helper import make_data_set, construct_decision_tree
+import construct_decision_tree, make_data_set
 import cv2
 import tkinter as tk
 from tkinter import filedialog
