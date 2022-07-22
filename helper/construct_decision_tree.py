@@ -4,9 +4,10 @@ import operator
 
 
 def entropy(data_set):
-    num_entries = len(data_set)
+    """计算熵"""
+    num_entries = len(data_set)  # 获取数据长度
     label_counts = {}
-    for feat_vec in data_set:
+    for feat_vec in data_set:  # 统计个数
         current_label = feat_vec[-1]
         if current_label not in label_counts.keys():
             label_counts[current_label] = 0
@@ -14,14 +15,15 @@ def entropy(data_set):
 
     ent = 0.0
     for key in label_counts:
-        prob = float(label_counts[key]) / num_entries
-        ent -= prob * log(prob, 2)
+        prob = float(label_counts[key]) / num_entries  # 计算概率值
+        ent -= prob * log(prob, 2)  # 更新熵
     return ent
 
 
 def split_data_set(data_set, axis, value):
+    """根据给定的特征划分数据"""
     ret = []
-    for feat_vec in data_set:
+    for feat_vec in data_set:  # 遍历数据集，选取按axis的当前value特征进行划分的数据集
         if feat_vec[axis] == value:
             reduced_feat_vec = feat_vec[:axis]
             reduced_feat_vec.extend(feat_vec[axis+1:])
@@ -31,8 +33,9 @@ def split_data_set(data_set, axis, value):
 
 
 def choose_best_feat(data_set):
-    num_feat = len(data_set[0]) - 1
-    base_ent = entropy(data_set)
+    """选取最好的特征"""
+    num_feat = len(data_set[0]) - 1  # 获取特征个数
+    base_ent = entropy(data_set)  # 计算熵
     best_gain = 0.0
     best_feat = -1
     for i in range(num_feat):
@@ -43,8 +46,8 @@ def choose_best_feat(data_set):
             sub_data_set = split_data_set(data_set, i, value)
             prob = len(sub_data_set) / float(len(data_set))
             new_ent += prob * entropy(sub_data_set)
-        gain = base_ent - new_ent
-        if gain > best_gain:
+        gain = base_ent - new_ent  # 信息增益gain
+        if gain > best_gain:  # 选取信息增益最大的特征值
             best_gain = gain
             best_feat = i
 
@@ -63,15 +66,15 @@ def majority_count(class_list):
 
 def create_tree(data_set, labels):
     class_list = [example[-1] for example in data_set]
-    if class_list.count(class_list[0]) == len(class_list):
-        return class_list[0]
-    if len(data_set[0]) == 1:
-        return majority_count(class_list)
+    if class_list.count(class_list[0]) == len(class_list):  # 当剩下的数据的类别完全相同时停止划分
+        return class_list[0]  # 直接返回标签
+    if len(data_set[0]) == 1:  # 遍历完所有特征时
+        return majority_count(class_list)  # 返回出现次数最多的类别
     best_feat = choose_best_feat(data_set)
     best_feat_label = labels[best_feat]
 
-    my_tree = {best_feat_label: {}}
-    del(labels[best_feat])
+    my_tree = {best_feat_label: {}}  # 用字典描述决策树
+    del(labels[best_feat])  # 删除已经选过的特征
     feat_vals = [example[best_feat] for example in data_set]
     unique_vals = set(feat_vals)
     for value in unique_vals:
@@ -81,6 +84,7 @@ def create_tree(data_set, labels):
 
 
 def classify(input_tree, feat_labels, test_vec):
+    """分类"""
     first_str = list(input_tree.keys())[0]
     second_dict = input_tree[first_str]
     feat_index = feat_labels.index(first_str)

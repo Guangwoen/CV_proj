@@ -1,6 +1,8 @@
 import numpy as np
 from helper import make_data_set, construct_decision_tree
 import cv2
+import tkinter as tk
+from tkinter import filedialog
 
 
 def get_feat_labels():
@@ -24,9 +26,12 @@ def img2data(img):
 def main():
     # make_data_set.cons_data_set()
     # construct_decision_tree.making_tree()
-    tree_model = construct_decision_tree.grab_tree('../model/tree.txt')
-    img = cv2.imread("../data_set/train_img/img33.png", cv2.IMREAD_GRAYSCALE)
+    root = tk.Tk()
+    root.withdraw()
+    f_path = filedialog.askopenfilename()
+    img = cv2.imread(f_path, cv2.IMREAD_GRAYSCALE)
     after = make_data_set.process_img(img)
+    tree_model = construct_decision_tree.grab_tree('../model/tree.txt')
     res = construct_decision_tree.classify(tree_model, get_feat_labels(), img2data(after))
     print('识别结果为: ' + res)
 
