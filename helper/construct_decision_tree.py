@@ -1,130 +1,113 @@
 import pandas as pd
-import math
+from math import log
 import collections
+import operator
+import sys
 import numpy as np
 from sklearn import tree
 
 
-def entropy(rows: list) -> float:
-    result = collections.Counter()
-    result.update(rows)
-    rows_len = len(rows)
-    assert rows_len
+def entropy(data_set):
+    num_entries = len(data_set)
+    label_counts = {}
+    for feat_vec in data_set:
+        current_label = feat_vec[-1]
+        if current_label not in label_counts.keys():
+            label_counts[current_label] = 0
+        label_counts[current_label] += 1
+
     ent = 0.0
-    for r in result.values():
-        p = float(r) / rows_len
-        ent -= p * math.log2(p)
+    for key in label_counts:
+        prob = float(label_counts[key]) / num_entries
+        ent -= prob * log(prob, 2)
     return ent
 
 
-def condition_entropy(future_list: list, result_list: list) -> float:
-    entropy_dict = collections.defaultdict(list)
-    for future, value in zip(future_list, result_list):
-        entropy_dict[future].append(value)
-    ent = 0.0
-    future_len = len(future_list)
-    for value in entropy_dict.values():
-        p = len(value) / future_len * entropy(value)
-        ent += p
-    return ent
+def split_data_set(data_set, axis, value):
+    ret = []
+    for feat_vec in data_set:
+        if feat_vec[axis] == value:
+            reduced_feat_vec = feat_vec[:axis]
+            reduced_feat_vec.extend(feat_vec[axis+1:])
+            ret.append(reduced_feat_vec)
+
+    return ret
 
 
-def gain(future_list: list, result_list: list) -> float:
-    info = entropy(result_list)
-    info_condition = condition_entropy(future_list, result_list)
-    return info - info_condition
+def choose_best_feat(data_set):
+    num_feat = len(data_set[0]) - 1
+    base_ent = entropy(data_set)
+    best_gain = 0.0
+    best_feat = -1
+    for i in range(num_feat):
+        feat_list = [example[i] for example in data_set]
+        unique_vals = set(feat_list)
+        new_ent = 0.0
+        for value in unique_vals:
+            sub_data_set = split_data_set(data_set, i, value)
+            prob = len(sub_data_set) / float(len(data_set))
+            new_ent += prob * entropy(sub_data_set)
+        gain = base_ent - new_ent
+        if gain > best_gain:
+            best_gain = gain
+            best_feat = i
+
+    return best_feat
 
 
-class DecisionNode(object):
-    def __init__(self, col=-1, data_set=None, labels=None, results=None, tb=None, fb=None):
-        self.has_calc_index = []
-        self.col = col
-        self.data_set = data_set
-        self.labels = labels
-        self.results = results
-        self.tb = tb
-        self.fb = fb
+def majority_count(class_list):
+    class_count = {}
+    for vote in class_list:
+        if vote not in class_count.keys():
+            class_count[vote] = 0
+        class_count[vote] += 1
+    sorted_class_count = sorted(class_count.iteritems(), key=operator.itemgetter(1), reverse=True)
+    return sorted_class_count[0][0]
 
 
-def if_split_end(result_list: list) -> bool:
-    result = collections.Counter(result_list)
-    return len(result) == 1
+def create_tree(data_set, labels):
+    class_list = [example[-1] for example in data_set]
+    if class_list.count(class_list[0]) == len(class_list):
+        return class_list[0]
+    if len(data_set[0]) == 1:
+        return majority_count(class_list)
+    best_feat = choose_best_feat(data_set)
+    best_feat_label = labels[best_feat]
+
+    my_tree = {best_feat_label: {}}
+    del(labels[best_feat])
+    feat_vals = [example[best_feat] for example in data_set]
+    unique_vals = set(feat_vals)
+    for value in unique_vals:
+        sub_labels = labels[:]
+        my_tree[best_feat_label][value] = create_tree(split_data_set(data_set, best_feat, value), sub_labels)
+    return my_tree
 
 
-def choose_best_future(data_set: list, labels: list, ignore_index: list) -> int:
-    result_dict = {}
-    future_num = len(data_set[0])
-    for i in range(future_num):
-        if i in ignore_index:
-            continue
-        future_list = [x[i] for x in data_set]
-        result_dict[i] = gain(future_list, labels)
-    print(result_dict)
-    ret = sorted(result_dict.items(), key=lambda x: x[1], reverse=True)
-    return ret[0][0]
+def classify(input_tree, feat_labels, test_vec):
+    first_str = input_tree.keys()[0]
+    second_dict = input_tree[first_str]
+    feat_index = feat_labels.index(first_str)
+    key = test_vec[feat_index]
+    value_of_feat = second_dict[key]
+    if isinstance(value_of_feat, dict):
+        class_label = classify(value_of_feat, feat_labels, test_vec)
+    else:
+        class_label = value_of_feat
+    return class_label
 
 
-class MyDecisionTree:
+def store_tree(input_tree, file_name):
+    import pickle
+    fw = open(file_name, 'w')
+    pickle.dump(input_tree, fw)
+    fw.close()
 
-    def __init__(self):
-        self.future_num = 0
-        self.tree_root = None
 
-    def build_tree(self, node: DecisionNode):
-        if if_split_end(node.labels):
-            node.results = node.labels[0]
-            return
-        print(node.labels)
-        best_index = choose_best_future(node.data_set, node.labels, node.has_calc_index)
-        node.col = best_index
-
-        tb_index = [i for i, value in enumerate(node.data_set) if value[best_index]]
-        tb_data_set = [node.data_set[x] for x in tb_index]
-        tb_data_labels = [node.labels[x] for x in tb_index]
-        tb_node = DecisionNode(data_set=tb_data_set, labels=tb_data_labels)
-        tb_node.has_calc_index = list(node.has_calc_index)
-        tb_node.has_calc_index.append(best_index)
-        node.tb = tb_node
-
-        fb_index = [i for i, value in enumerate(node.data_set) if not value[best_index]]
-        fb_data_set = [node.data_set[x] for x in fb_index]
-        fb_data_labels = [node.labels[x] for x in fb_index]
-        fb_node = DecisionNode(data_set=fb_data_set, labels=fb_data_labels)
-        fb_node.has_calc_index = list(node.has_calc_index)
-        fb_node.has_calc_index.append(best_index)
-        node.fb = fb_node
-
-        if tb_index:
-            self.build_tree(node.tb)
-        if fb_index:
-            self.build_tree(node.fb)
-
-    def fit(self, x: list, y: list):
-        self.future_num = len(x[0])
-        self.tree_root = DecisionNode(data_set=x, labels=y)
-        self.build_tree(self.tree_root)
-        self.clear_tree_example_data(self.tree_root)
-
-    def clear_tree_example_data(self, node: DecisionNode):
-        del node.has_calc_index
-        del node.labels
-        del node.data_set
-        if node.tb:
-            self.clear_tree_example_data(node.tb)
-        if node.fb:
-            self.clear_tree_example_data(node.fb)
-
-    def _predict(self, data_test: list, node: DecisionNode):
-        if node.results:
-            return node.results
-        col = node.col
-        if data_test[col]:
-            return self._predict(data_test, node.tb)
-        else:
-            return self._predict(data_test, node.fb)
-
-    def predict(self, data_test):
-        return self._predict(data_test, self.tree_root)
+def grab_tree(file_name):
+    import pickle
+    fr = open(file_name)
+    return pickle.load(fr)
 
 
 def making_tree():
@@ -137,13 +120,13 @@ def making_tree():
             sub = str(img_data.loc[i, 'Row_'+str(j)])
             lk = str(sub).split(',')
             lst = lst + lk
-        x.append(str(lst))
-    y = np.array(img_data.loc[:, 'Label'])
-    k = collections.Counter()
-    k.update(x)
+        lst.append(img_data.loc[i, 'Label'])
+        x.append(lst)
+    y = np.array(['Row_0', 'Row_1', 'Row_2', 'Row_3', 'Row_4', 'Row_5', 'Row_6', 'Row_7'])
 
-    #tree = MyDecisionTree()
-    #tree.fit(x, y)
+    lenses_tree = create_tree(x, y)
+
+    print('creating finished!')
 
 
 
