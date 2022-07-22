@@ -99,15 +99,17 @@ def classify(input_tree, feat_labels, test_vec):
 
 def store_tree(input_tree, file_name):
     import pickle
-    fw = open(file_name, 'w')
-    pickle.dump(input_tree, fw)
+    fw = open(file_name, 'wb')
+    fw.write(pickle.dumps(input_tree))
     fw.close()
 
 
 def grab_tree(file_name):
     import pickle
-    fr = open(file_name)
-    return pickle.load(fr)
+    fr = open(file_name, 'wb')
+    data = pickle.loads(fr.read())
+    fr.close()
+    return data
 
 
 def making_tree():
@@ -122,10 +124,12 @@ def making_tree():
             lst = lst + lk
         lst.append(img_data.loc[i, 'Label'])
         x.append(lst)
-    y = np.array(['Row_0', 'Row_1', 'Row_2', 'Row_3', 'Row_4', 'Row_5', 'Row_6', 'Row_7'])
+    y = []
+    for i in range(0, 64):
+        y.append('Row_'+str(i))
 
     lenses_tree = create_tree(x, y)
-
+    store_tree(lenses_tree, '../model/tree.txt')
     print('creating finished!')
 
 
