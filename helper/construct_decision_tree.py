@@ -1,10 +1,6 @@
 import pandas as pd
 from math import log
-import collections
 import operator
-import sys
-import numpy as np
-from sklearn import tree
 
 
 def entropy(data_set):
@@ -85,7 +81,7 @@ def create_tree(data_set, labels):
 
 
 def classify(input_tree, feat_labels, test_vec):
-    first_str = input_tree.keys()[0]
+    first_str = list(input_tree.keys())[0]
     second_dict = input_tree[first_str]
     feat_index = feat_labels.index(first_str)
     key = test_vec[feat_index]
@@ -106,7 +102,7 @@ def store_tree(input_tree, file_name):
 
 def grab_tree(file_name):
     import pickle
-    fr = open(file_name, 'wb')
+    fr = open(file_name, 'rb')
     data = pickle.loads(fr.read())
     fr.close()
     return data

@@ -1,20 +1,35 @@
-from math import log
-import operator
-import cv2
 import numpy as np
 from helper import make_data_set, construct_decision_tree
+import cv2
 
 
-if __name__ == '__main__':
+def get_feat_labels():
+    lst = []
+    for i in range(0, 64):
+        lst.append('Row_'+str(i))
+    return lst
+
+
+def img2data(img):
+    vec = []
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            if img[i][j] == 255:
+                vec.append('1')
+            else:
+                vec.append('0')
+    return vec
+
+
+def main():
     # make_data_set.cons_data_set()
     # construct_decision_tree.making_tree()
     tree_model = construct_decision_tree.grab_tree('../model/tree.txt')
+    img = cv2.imread("../data_set/train_img/img33.png", cv2.IMREAD_GRAYSCALE)
+    after = make_data_set.process_img(img)
+    res = construct_decision_tree.classify(tree_model, get_feat_labels(), img2data(after))
+    print('识别结果为: ' + res)
 
-    img = cv2.imread('/Users/cuiguangyuan/Desktop/train_img/img16.png', cv2.IMREAD_GRAYSCALE)
-    img = cv2.morphologyEx(img, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
-    threshed = make_data_set.threshing(img)
-    after = make_data_set.resize_img(img.shape[0], img.shape[1], threshed)
-    final_img = make_data_set.threshing(after)
-    cv2.imshow('tmp window1', final_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
